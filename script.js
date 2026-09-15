@@ -47,9 +47,9 @@ const ANG_SERVICES = Object.freeze([
       const hidden = activeFilter !== 'todos' && service.category !== activeFilter;
       return `<article class="service-card${service.badge ? ' featured' : ''}${service.id==='elite' ? ' elite' : ''}${isSelected ? ' is-selected' : ''}" data-service="${service.id}"${hidden ? ' hidden' : ''} aria-labelledby="title-${service.id}">
         <div class="card-top"><span class="service-icon">${icon(service.icon)}</span>${service.badge ? `<span class="card-badge">${service.badge}</span>` : `<span class="card-number" aria-hidden="true">${String(index+1).padStart(2,'0')}</span>`}</div>
-        <div class="stars" aria-label="Nível de cuidado: ${service.stars} estrelas">${'★'.repeat(service.stars)}</div>
+        <div class="stars" aria-label="Nível de cuidado: ${service.stars} estrelas">${Array.from({length:service.stars},()=>icon('star')).join('')}</div>
         <h3 id="title-${service.id}">${service.name}</h3><p class="card-description">${service.description}</p>
-        <details class="service-includes"><summary>Veja o que está incluso</summary><ul>${service.includes.map(item=>`<li>${item}</li>`).join('')}</ul></details>
+        <details class="service-includes"><summary>Veja o que está incluso</summary><ul>${service.includes.map(item=>`<li>${icon('check')}<span>${item}</span></li>`).join('')}</ul></details>
         <div class="card-purchase">${service.prices ? `<div class="vehicle-options" role="group" aria-label="Porte do veículo para ${service.name}">${['P','G'].map(option => `<button type="button" data-size="${option}" aria-pressed="${size===option}" class="size-option${size===option?' active':''}">Carro ${option}<span>${money(service.prices[option])}</span></button>`).join('')}</div>` : '<span class="price-caption">Valor do pacote</span>'}
           <div class="price-line" aria-label="Preço ${money(getPrice(service,size))}">${priceMarkup(getPrice(service,size))}</div>
           <button type="button" class="service-add" data-add="${service.id}" aria-pressed="${isSelected}" aria-label="${isSelected ? 'Remover':'Adicionar'} ${service.name} ${size ? 'Carro '+size : ''} ${isSelected ? 'do':'ao'} orçamento">${icon(isSelected?'check':'plus')}<span>${isSelected?'Adicionado':'Adicionar ao orçamento'}</span></button>
@@ -162,7 +162,7 @@ const ANG_SERVICES = Object.freeze([
     const vehicle = $('#vehicle').value.trim() || 'A informar';
     const day = $('#desired-day').value.trim() || 'A combinar';
     return [
-      'Olá, ANG Estética Automotiva! 🚗✨',
+      'Olá, ANG Estética Automotiva!',
       'Gostaria de agendar os seguintes serviços:',
       '',`Veículo: ${vehicle}`,'','Serviços selecionados:',
       ...items.map(item => `- ${item.name}${item.size?' (Carro '+item.size+')':''} - ${money(item.price)}`),
@@ -214,6 +214,36 @@ const ANG_SERVICES = Object.freeze([
   window.matchMedia('(min-width: 1051px)').addEventListener('change',event=>{if(event.matches) closeMenu();});
   $('#year').textContent = new Date().getFullYear();
   renderCatalog();renderCart();placeCart();
+
+  // Apenas o veículo e sua iluminação são animados; o cenário permanece fixo.
+  (() => {
+    const hero = $('#inicio');
+    const toggle = $('#hero-motion-toggle');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let userPaused = false;
+    let inView = true;
+    function syncMotion() {
+      const running = !userPaused && !reducedMotion.matches && inView && !document.hidden;
+      hero.classList.toggle('motion-paused',userPaused);
+      hero.classList.toggle('motion-suspended',!running);
+      hero.classList.toggle('motion-active',running);
+      toggle.hidden = reducedMotion.matches;
+      toggle.setAttribute('aria-pressed',String(userPaused));
+      const label = userPaused ? 'Retomar animação do carro' : 'Pausar animação do carro';
+      toggle.setAttribute('aria-label',label);
+      toggle.setAttribute('title',label);
+    }
+    toggle.addEventListener('click',() => {userPaused = !userPaused;syncMotion();});
+    reducedMotion.addEventListener('change',syncMotion);
+    document.addEventListener('visibilitychange',syncMotion);
+    if ('IntersectionObserver' in window) {
+      const observer = new window.IntersectionObserver(entries => {
+        inView = entries[0].isIntersecting;syncMotion();
+      },{threshold:0});
+      observer.observe(hero);
+    }
+    syncMotion();
+  })();
 
   // Interface opcional de navegador: a seleção usa exatamente o mesmo estado da tela.
   const modelContext = document.modelContext;
